@@ -50,7 +50,7 @@ def evaluate(model: ResNet, loader: DataLoader, device: torch.device) -> Tuple[f
 def train(npz_path : str, board_size : int=8, epochs: int=100, lr : float=1e-3, val_split : float=0.1) -> None:
     device : torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     game   : HexBoard     = HexBoard(board_size)
-    model  : ResNet       = ResNet(game).to(device)
+    model  : ResNet       = ResNet(num_cells=game.num_cells).to(device)
     opt    : optim.Adam   = optim.Adam(model.parameters(), lr=lr)
 
     dataset    = HexDataset(npz_path)

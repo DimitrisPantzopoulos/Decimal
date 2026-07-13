@@ -24,8 +24,7 @@ class ResBlock(nn.Module):
 class ResNet(nn.Module):
     def __init__(
             self,
-            game : HexBoard,
-
+            num_cells       : int = 64,
             in_channels     : int = 3,
             num_hidden      : int = 64,
             num_res_blocks  : int = 3,
@@ -50,7 +49,7 @@ class ResNet(nn.Module):
             nn.BatchNorm2d(policy_head_out),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(policy_head_out * game.num_cells, game.num_cells)
+            nn.Linear(policy_head_out * num_cells, num_cells)
         )
 
         self.value_head : nn.Sequential = nn.Sequential(
@@ -58,7 +57,7 @@ class ResNet(nn.Module):
             nn.BatchNorm2d(value_head_out),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(value_head_out * game.num_cells, 1),
+            nn.Linear(value_head_out * num_cells, 1),
             nn.Tanh()
         )
 
@@ -76,7 +75,7 @@ def test_compatibility() -> None:
     BOARD_SIZE : int = 8
 
     board  : HexBoard = HexBoard(size=BOARD_SIZE)
-    resnet : ResNet   = ResNet(game=board)
+    resnet : ResNet   = ResNet(num_cells=board.num_cells)
 
     encoded_board : torch.Tensor = torch.from_numpy(board.encode_board().copy()).unsqueeze(0)
 
