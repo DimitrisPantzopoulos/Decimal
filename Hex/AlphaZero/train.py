@@ -1,4 +1,3 @@
-from ..Board import HexBoard
 from .Zero import ResNet
 from tqdm import tqdm
 
@@ -49,8 +48,7 @@ def evaluate(model: ResNet, loader: DataLoader, device: torch.device) -> Tuple[f
 
 def train(npz_path : str, board_size : int=8, epochs: int=100, lr : float=1e-3, val_split : float=0.1) -> None:
     device : torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    game   : HexBoard     = HexBoard(board_size)
-    model  : ResNet       = ResNet(num_cells=game.num_cells).to(device)
+    model  : ResNet       = ResNet(board_size=board_size).to(device)
     opt    : optim.Adam   = optim.Adam(model.parameters(), lr=lr)
 
     dataset    = HexDataset(npz_path)
@@ -63,7 +61,7 @@ def train(npz_path : str, board_size : int=8, epochs: int=100, lr : float=1e-3, 
 
     print(f"Device     : {device}")
     print(f"Dataset    : {len(dataset):,} samples  ({train_size:,} train / {val_size:,} val)")
-    print(f"Board size : {board_size}x{board_size}  ({game.num_cells} cells)")
+    print(f"Board size : {board_size}x{board_size}  ({board_size * board_size} cells)")
     print(f"Parameters : {sum(p.numel() for p in model.parameters()):,}")
     print()
 

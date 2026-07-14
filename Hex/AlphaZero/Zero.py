@@ -8,13 +8,13 @@ import torch
 class ResBlock(nn.Module):
     def __init__(self, num_hidden : int=4) -> None:
         super().__init__()
-        self.conv1 : nn.Conv2d = nn.Conv2d(num_hidden, num_hidden, kernel_size=3, padding=1)
-        self.conv2 : nn.Conv2d = nn.Conv2d(num_hidden, num_hidden, kernel_size=3, padding=1)
+        self.conv1 : nn.Conv2d = nn.Conv2d(num_hidden, num_hidden, kernel_size=3, padding=1, bias=False)
+        self.conv2 : nn.Conv2d = nn.Conv2d(num_hidden, num_hidden, kernel_size=3, padding=1, bias=False)
 
         self.bn1 : nn.BatchNorm2d = nn.BatchNorm2d(num_hidden)
         self.bn2 : nn.BatchNorm2d = nn.BatchNorm2d(num_hidden)
 
-    def __call__(self, x : torch.Tensor) -> torch.Tensor:
+    def forward(self, x : torch.Tensor) -> torch.Tensor:
         residual : torch.Tensor = x
 
         x = F.relu(self.bn1(self.conv1(x)))
@@ -24,40 +24,45 @@ class ResBlock(nn.Module):
 class ResNet(nn.Module):
     def __init__(
             self,
-            num_cells       : int = 64,
-            in_channels     : int = 3,
-            num_hidden      : int = 64,
-            num_res_blocks  : int = 3,
-            policy_head_out : int = 32,
-            value_head_out  : int = 32,
+            board_size           : int = 11,
+            in_channels          : int = 3,
+            num_hidden           : int = 64,
+            num_res_blocks       : int = 4,
+            policy_head_channels : int = 4,
+            value_head_channels  : int = 2,
+            value_hidden         : int = 128,
             
         ) -> None:
         super().__init__()
 
+        self.num_cells = board_size * board_size
+
         self.start_block : nn.Sequential = nn.Sequential(
-            nn.Conv2d(in_channels, num_hidden, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels, num_hidden, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(num_hidden),
             nn.ReLU()
         )
 
-        self.backbone : nn.ModuleList = nn.ModuleList(
-            [ResBlock(num_hidden) for _ in range(num_res_blocks)]
+        self.backbone : nn.Sequential = nn.Sequential(
+            *[ResBlock(num_hidden) for _ in range(num_res_blocks)]
         )
 
         self.policy_head : nn.Sequential = nn.Sequential(
-            nn.Conv2d(num_hidden, policy_head_out, kernel_size=3, padding=1),
-            nn.BatchNorm2d(policy_head_out),
+            nn.Conv2d(num_hidden, policy_head_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(policy_head_channels),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(policy_head_out * num_cells, num_cells)
+            nn.Linear(policy_head_channels * self.num_cells, self.num_cells)
         )
 
         self.value_head : nn.Sequential = nn.Sequential(
-            nn.Conv2d(num_hidden, value_head_out, kernel_size=3, padding=1),
-            nn.BatchNorm2d(value_head_out),
+            nn.Conv2d(num_hidden, value_head_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(value_head_channels),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(value_head_out * num_cells, 1),
+            nn.Linear(value_head_channels * self.num_cells, value_hidden),
+            nn.ReLU(),
+            nn.Linear(value_hidden, 1),
             nn.Tanh()
         )
 
@@ -75,7 +80,7 @@ def test_compatibility() -> None:
     BOARD_SIZE : int = 8
 
     board  : HexBoard = HexBoard(size=BOARD_SIZE)
-    resnet : ResNet   = ResNet(num_cells=board.num_cells)
+    resnet : ResNet   = ResNet(board_size=BOARD_SIZE)
 
     encoded_board : torch.Tensor = torch.from_numpy(board.encode_board().copy()).unsqueeze(0)
 
